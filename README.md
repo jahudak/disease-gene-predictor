@@ -26,6 +26,12 @@ The project will include a model and a learning framework based on [PyTorch Ligh
 
 ### Documentation
 
+Requirements:
+- [TeX Live](https://www.tug.org/texlive/)  
+- [LaTeX Workshop](https://marketplace.visualstudio.com/items?itemName=James-Yu.latex-workshop)
+
+After installation, the project documentation will build after every LaTeX file save. 
+
 ### Deployment
 
 ## 📚 Resources
