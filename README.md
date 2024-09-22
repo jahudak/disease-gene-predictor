@@ -7,18 +7,18 @@ The project will include a model and a learning framework based on PyTorch Light
 ## Milestones
 
 1. Containerisation and Data  
-  - [] Containerisation
-  - [] Data collection
-  - [] Data analyzation
-  - [] Data preparation
-  - [] Data cleaning
-  - [] Evaluation methodology
+  - [ ] Containerisation
+  - [ ] Data collection
+  - [ ] Data analyzation
+  - [ ] Data preparation
+  - [ ] Data cleaning
+  - [ ] Evaluation methodology
 2. Baseline
-  - [] Baseline model
+  - [ ] Baseline model
 3. Improvement and MLaaS
-  - [] Iterative improvement
-  - [] Evaluation
-  - [] MLaaS
+  - [ ] Iterative improvement
+  - [ ] Evaluation
+  - [ ] MLaaS
 
 ## Quick Start
 
