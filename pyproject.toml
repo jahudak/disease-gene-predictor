@@ -1,0 +1,26 @@
+[tool.poetry]
+name = "disease-gene-predictor"
+version = "0.1.0"
+description = "Graph neural network project leveraging DisGeNET to predict disease-gene associations"
+authors = ["jahudak <100032984+jahudak@users.noreply.github.com>"]
+readme = "README.md"
+packages = [
+    { include = "data" },
+    { include = "model" }
+]
+
+[tool.poetry.dependencies]
+python = "^3.12"
+torch = "^2.4.1"
+torch-geometric = "^2.6.0"
+lightning = "^2.4.0"
+scikit-learn = "^1.5.2"
+numpy = "^2.1.1"
+pandas = "^2.2.3"
+matplotlib = "^3.9.2"
+seaborn = "^0.13.2"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

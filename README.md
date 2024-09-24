@@ -24,6 +24,15 @@ The project will include a model and a learning framework based on [PyTorch Ligh
 
 ### Development 
 
+Requirements: 
+- [poetry v1.8](https://python-poetry.org/)
+
+After meeting the requirements, execute the following commands: 
+```
+poetry install
+poetry shell
+```
+
 ### Documentation
 
 Requirements:
