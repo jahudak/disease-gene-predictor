@@ -6,11 +6,10 @@ import pandas as pd
 import matplotlib
 import matplotlib.pyplot as plt
 import seaborn as sns
-from data import DisgenetClient
 
 class Model():
-    def __init__(self):
-        self.disgenet_client = DisgenetClient("mocked_api_key")
+    def __init__(self, disgenet_client):
+        self.disgenet_client = disgenet_client
     
     def test_imports(self):
         print(f"PyTorch version: {torch.__version__}")

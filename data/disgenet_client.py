@@ -3,4 +3,4 @@ class DisgenetClient:
         self.api_key = api_key 
 
     def get_data(self):
-        return "mocked data"
+        return f"{self.api_key}:mocked_data"
