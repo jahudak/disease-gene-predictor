@@ -1,0 +1,28 @@
+# virtual environments
+.venv
+venv/
+env/
+
+# version control
+.git/
+.gitignore
+
+# documentation
+README.md
+docs/
+*.png
+*.svg
+*.jpg
+*.tex
+*.aux
+*.fdb_latexmk
+*.fls
+*.log
+*.pdf
+*.synctex.gz
+*.toc
+
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
