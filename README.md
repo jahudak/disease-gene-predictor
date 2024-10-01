@@ -24,7 +24,7 @@ The project will include a model and a learning framework based on [PyTorch Ligh
 
 ### Development 
 
-Requirements: 
+#### Requirements: 
 - [poetry v1.8](https://python-poetry.org/)
 
 After meeting the requirements, execute the following commands: 
@@ -35,13 +35,26 @@ poetry shell
 
 ### Documentation
 
-Requirements:
+#### Requirements:
 - [TeX Live](https://www.tug.org/texlive/)  
 - [LaTeX Workshop](https://marketplace.visualstudio.com/items?itemName=James-Yu.latex-workshop)
 
 After installation, the project documentation will build after every LaTeX file save. 
 
 ### Deployment
+
+#### Requirements: 
+- [Docker](https://www.docker.com/)
+
+#### Build the image locally  
+```
+docker build -t disease-gene-predictor .
+```
+
+#### Start the container  
+```
+docker run --env-file .env -e DISGENET_API_KEY=<paste-your-api-key-here> disease-gene-predictor
+```
 
 ## 📚 Resources
 
