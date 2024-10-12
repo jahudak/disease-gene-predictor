@@ -48,6 +48,7 @@ class DisgenetClient:
             params = params,
             headers = headers
         )
+        self.handle_api_rate_limit(response, params, route)
         return json.loads(response.text)
     
     def process_response(self, response: Dict, results: List[str]) -> None:
@@ -66,7 +67,17 @@ class DisgenetClient:
         self.write_to_csv_file(results)
         results.clear()
         return
-
+    
+    def handle_api_rate_limit(self, response: Dict, params: Dict, route: str) -> None:
+        if not response.ok:
+            if response.status_code == 429:
+                while (not response.ok) and (response.status_code == 429):
+                    time.sleep(int(response.headers['x-rate-limit-retry-after-seconds']) + 1)
+                    response = self.send_request(params, route)
+                    if response.ok:
+                        break
+                    else:
+                        continue
 
     def write_to_csv_file(self, data: List[str]) -> None:
         with open(self.data_file_path, "a") as file:
