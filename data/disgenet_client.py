@@ -2,19 +2,22 @@ import requests
 import json
 import time
 import math 
-from typing import Dict, List
+from typing import Dict, List, Any
 
 class DisgenetClient: 
     def __init__(self, api_key: str):
         self.api_key = api_key
         self.api_calls = 0
         self.total_results = 0
+        self.disease_count = 0
+        self.gene_count = 0
         self.disease_file_path = "disease_ids.txt"
         self.data_file_path = "dga_data.csv"
         self.disgenet_base_url = "https://api.disgenet.com"
         self.disgenet_dga_route = "/api/v1/gda/summary"
 
     def create_csv_file(self) -> None:
+        start_time = time.time()
         self.write_to_csv_file(["disease_id,gene_id,ei,dsi,dpi"])
 
         disease_categories: List[str] = self.get_disease_categories()
@@ -33,11 +36,12 @@ class DisgenetClient:
                 response = self.send_request(params, self.disgenet_dga_route)
                 self.process_response(response, results)
 
-        self.sort_csv_file()
-        print(f"[LOG] CSV file created with {self.total_results} disease-gene-associations using {self.api_calls} api calls")
+        self.postprocess_csv_file()
+        end_time = time.time()
+        self.csv_log(start_time, end_time)
         return
 
-    def send_request(self, params: Dict, route: str):
+    def send_request(self, params: Dict, route: str) -> Any:
         self.api_calls += 1
         headers: Dict = {
             "Authorization": self.api_key,
@@ -48,7 +52,7 @@ class DisgenetClient:
             params = params,
             headers = headers
         )
-        self.handle_api_rate_limit(response, params, route)
+        response = self.handle_api_rate_limit(response, params, route)
         return json.loads(response.text)
     
     def process_response(self, response: Dict, results: List[str]) -> None:
@@ -68,16 +72,29 @@ class DisgenetClient:
         results.clear()
         return
     
-    def handle_api_rate_limit(self, response: Dict, params: Dict, route: str) -> None:
-        if not response.ok:
-            if response.status_code == 429:
-                while (not response.ok) and (response.status_code == 429):
-                    time.sleep(int(response.headers['x-rate-limit-retry-after-seconds']) + 1)
-                    response = self.send_request(params, route)
-                    if response.ok:
-                        break
-                    else:
-                        continue
+    def handle_api_rate_limit(self, response: Dict, params: Dict, route: str) -> Any:
+        if response.status_code == 429:
+            while response.status_code == 429:
+                wait_time = int(response.headers['x-rate-limit-retry-after-seconds']) + 1
+                print(f"[LOG] Waiting {wait_time} seconds to restore rate limit")
+                time.sleep(wait_time)
+
+                self.api_calls += 1
+                headers: Dict = {
+                    "Authorization": self.api_key,
+                    "accept": "application/json"
+                }
+                response = requests.get(
+                    url = self.disgenet_base_url + route,
+                    params = params,
+                    headers = headers
+                )
+
+                if response.ok:
+                    break
+                else:
+                    continue
+        return response
 
     def write_to_csv_file(self, data: List[str]) -> None:
         with open(self.data_file_path, "a") as file:
@@ -85,7 +102,7 @@ class DisgenetClient:
                 file.write(line + "\n")
         return 
     
-    def sort_csv_file(self) -> None:
+    def postprocess_csv_file(self) -> None:
         with open(self.data_file_path, 'r') as file:
             lines = file.readlines()
         
@@ -94,6 +111,9 @@ class DisgenetClient:
 
         sorted_rows: List[str] = sorted(rows, key = lambda line: line.strip().split(',')[0])
         self.total_results = len(sorted_rows)
+
+        self.disease_count = len({line.strip().split(',')[0] for line in sorted_rows})
+        self.gene_count = len({line.strip().split(',')[1] for line in sorted_rows})
 
         with open(self.data_file_path, 'w') as file:
             file.write(header)
@@ -118,3 +138,14 @@ class DisgenetClient:
         with open(self.disease_file_path, 'r') as file:
             categories = file.readlines()
         return categories
+    
+    def csv_log(self, start_time, end_time) -> None:
+        elapsed_time = end_time - start_time
+        minutes = int(elapsed_time // 60)
+        seconds = int(elapsed_time % 60)
+
+        print(f"[LOG] CSV file created with {self.disease_count} diseases, {self.gene_count} genes and {self.total_results} associations")
+        if minutes > 0:
+            print(f"[LOG] Completed in {minutes} minutes and {seconds} seconds using {self.api_calls} api calls")
+        else:
+            print(f"[LOG] Completed in {seconds} seconds using {self.api_calls} api calls")
