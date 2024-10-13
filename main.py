@@ -1,6 +1,6 @@
 import os
 from model import Model
-from data import DisgenetClient
+from data import DisgenetClient, DisgenetDataModule
 
 def main():
     disgenet_api_key = os.getenv("DISGENET_API_KEY")
@@ -15,8 +15,7 @@ def main():
         disgenet_client = DisgenetClient(disgenet_api_key)
         disgenet_client.create_csv_file()
     
-    #model = Model(disgenet_client)
-    #model.test_imports()
-    #model.test_data()
+    datamodule = DisgenetDataModule()
+    print("[LOG] Finished successfully")
 
 main()
