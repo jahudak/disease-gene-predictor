@@ -168,3 +168,6 @@ docs/*.log
 docs/*.pdf
 docs/*.gz
 docs/*.toc
+
+# Data
+*.csv
