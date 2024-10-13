@@ -17,6 +17,8 @@ class DisgenetClient:
         self.disgenet_dga_route = "/api/v1/gda/summary"
 
     def create_csv_file(self) -> None:
+        print("[LOG] Starting data creation process. This may take a few minutes...")
+
         start_time = time.time()
         self.write_to_csv_file(["disease_id,gene_id,ei,dsi,dpi"])
 
@@ -144,8 +146,8 @@ class DisgenetClient:
         minutes = int(elapsed_time // 60)
         seconds = int(elapsed_time % 60)
 
-        print(f"[LOG] CSV file created with {self.disease_count} diseases, {self.gene_count} genes and {self.total_results} associations")
+        print(f"[LOG] Data file created with {self.disease_count} diseases, {self.gene_count} genes and {self.total_results} associations.")
         if minutes > 0:
-            print(f"[LOG] Completed in {minutes} minutes and {seconds} seconds using {self.api_calls} api calls")
+            print(f"[LOG] Completed in {minutes} minutes and {seconds} seconds using {self.api_calls} api calls.")
         else:
-            print(f"[LOG] Completed in {seconds} seconds using {self.api_calls} api calls")
+            print(f"[LOG] Completed in {seconds} seconds using {self.api_calls} api calls.")

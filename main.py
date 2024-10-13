@@ -10,8 +10,10 @@ def main():
         print("[ERROR] Missing DISGENET API key.")
         return
 
-    disgenet_client = DisgenetClient(disgenet_api_key)
-    disgenet_client.create_csv_file()
+    if not os.path.exists("dga_data.csv"):
+        print("[LOG] Disgenet data not found. Preparing to create data...")
+        disgenet_client = DisgenetClient(disgenet_api_key)
+        disgenet_client.create_csv_file()
     
     #model = Model(disgenet_client)
     #model.test_imports()
