@@ -97,3 +97,7 @@ docker run --env-file .env -e DISGENET_API_KEY=<paste-your-api-key-here> disease
 - [📒 Article](https://arxiv.org/pdf/1611.07308)
 - [🎞️ Tutorial](https://www.youtube.com/watch?v=hZkLu2OaHD0)
 - [🤖 TensorFlow example](https://github.com/tkipf/gae)
+
+## 📜 License
+
+This project is licensed under the Apache License 2.0. See the [LICENSE](LICENSE) file for details or visit the [official Apache License 2.0 page](http://www.apache.org/licenses/LICENSE-2.0).
