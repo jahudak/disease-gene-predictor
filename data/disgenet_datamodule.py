@@ -1,7 +1,10 @@
 import pandas as pd
 import torch
 import random
+import numpy as np
+import pandas as pd
 from torch_geometric.data import HeteroData
+from pytorch_lightning import LightningDataModule
 from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader
 from pytorch_lightning import LightningDataModule
@@ -63,7 +66,7 @@ class DisgenetDataModule(LightningDataModule):
         train_data["disease"].x = torch.tensor([attr["category"] for attr in disease_attributes], dtype = torch.float)
         train_data["gene"].id = torch.tensor([i for i in range(len(gene_id_mapping))])
         train_data["gene"].x = torch.tensor([[attr["dsi"], attr["dpi"]] for attr in gene_attributes], dtype = torch.float)
-        train_data["disease", "to", "gene"].edge_index = torch.tensor([X_train["disease_id"].values, X_train["gene_id"].values], dtype = torch.long)
+        train_data["disease", "to", "gene"].edge_index = torch.tensor(np.vstack((X_train["disease_id"].values, X_train["gene_id"].values)), dtype = torch.long)
         train_data["disease", "to", "gene"].edge_attr = torch.tensor(X_train["ei"].values, dtype = torch.float)
         train_data["disease", "to", "gene"].y = y_train
         self.train_data = train_data
@@ -73,7 +76,7 @@ class DisgenetDataModule(LightningDataModule):
         test_data["disease"].x = torch.tensor([attr["category"] for attr in disease_attributes], dtype = torch.float)
         test_data["gene"].id = torch.tensor([i for i in range(len(gene_id_mapping))])
         test_data["gene"].x = torch.tensor([[attr["dsi"], attr["dpi"]] for attr in gene_attributes], dtype = torch.float)
-        test_data["disease", "to", "gene"].edge_index = torch.tensor([X_test["disease_id"].values, X_test["gene_id"].values], dtype = torch.long)
+        test_data["disease", "to", "gene"].edge_index = torch.tensor(np.vstack((X_train["disease_id"].values, X_train["gene_id"].values)), dtype = torch.long)
         test_data["disease", "to", "gene"].edge_attr = torch.tensor(X_test["ei"].values, dtype = torch.float)
         test_data["disease", "to", "gene"].y = y_test
         self.test_data = test_data
@@ -83,7 +86,7 @@ class DisgenetDataModule(LightningDataModule):
         val_data["disease"].x = torch.tensor([attr["category"] for attr in disease_attributes], dtype = torch.float)
         val_data["gene"].id = torch.tensor([i for i in range(len(gene_id_mapping))])
         val_data["gene"].x = torch.tensor([[attr["dsi"], attr["dpi"]] for attr in gene_attributes], dtype = torch.float)
-        val_data["disease", "to", "gene"].edge_index = torch.tensor([X_val["disease_id"].values, X_val["gene_id"].values], dtype = torch.long)
+        val_data["disease", "to", "gene"].edge_index = torch.tensor(np.vstack((X_train["disease_id"].values, X_train["gene_id"].values)), dtype = torch.long)
         val_data["disease", "to", "gene"].edge_attr = torch.tensor(X_val["ei"].values, dtype = torch.float)
         val_data["disease", "to", "gene"].y = y_val
         self.val_data = val_data
