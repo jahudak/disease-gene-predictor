@@ -1,13 +1,11 @@
-import pandas as pd
 import torch
 import random
 import numpy as np
 import pandas as pd
 from torch_geometric.data import HeteroData
+from torch_geometric.loader import DataLoader
 from pytorch_lightning import LightningDataModule
 from sklearn.model_selection import train_test_split
-from torch.utils.data import DataLoader
-from pytorch_lightning import LightningDataModule
 
 class DisgenetDataModule(LightningDataModule):
     def __init__(self, batch_size = 32):
