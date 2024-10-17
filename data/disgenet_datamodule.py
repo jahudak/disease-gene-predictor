@@ -2,6 +2,7 @@ import torch
 import random
 import numpy as np
 import pandas as pd
+from typing import List, Dict, Any
 from torch_geometric.data import HeteroData
 from torch_geometric.loader import DataLoader
 from pytorch_lightning import LightningDataModule
@@ -12,6 +13,7 @@ class DisgenetDataModule(LightningDataModule):
         super().__init__()
         random.seed(42)
         self.batch_size = batch_size
+        
         self.train_data = None
         self.test_data = None
         self.val_data = None
@@ -30,13 +32,7 @@ class DisgenetDataModule(LightningDataModule):
         df['category'] = df['disease_id'].str[6]
         df['target'] = 1
 
-        self.disease_id_mapping = {id_str: idx for idx, id_str in enumerate(df['disease_id'].unique())}
-        self.gene_id_mapping = {id_str: idx for idx, id_str in enumerate(sorted(df['gene_id'].unique()))}
-        self.category_mapping = {id_str: idx for idx, id_str in enumerate(sorted(df['category'].unique()))}
-
-        df['disease_id'] = df['disease_id'].map(self.disease_id_mapping)
-        df['gene_id'] = df['gene_id'].map(self.gene_id_mapping)
-        df['category'] = df['category'].map(self.category_mapping)
+        self._map_attributes(df)
 
         self.disease_attributes = [{
             "category": int(df[df['disease_id'] == i].iloc[0]["category"])
@@ -71,14 +67,26 @@ class DisgenetDataModule(LightningDataModule):
         self.test_data = self._create_hetero_data(X_test, y_test)
         self.val_data = self._create_hetero_data(X_val, y_val)
 
-    def train_dataloader(self):
+    def train_dataloader(self) -> DataLoader:
         return DataLoader(self.train_data, batch_size = self.batch_size, shuffle = True)
 
-    def val_dataloader(self):
+    def val_dataloader(self) -> DataLoader:
         return DataLoader(self.val_data, batch_size = self.batch_size)
 
-    def test_dataloader(self):
+    def test_dataloader(self) -> DataLoader:
         return DataLoader(self.test_data, batch_size = self.batch_size)
+
+    def _map_attributes(self, df: pd.DataFrame) -> None: 
+        self.disease_id_mapping = self._create_mapping(df, "disease_id")
+        self.gene_id_mapping = self._create_mapping(df, "gene_id")
+        self.category_mapping = self._create_mapping(df, "category")
+
+        df['disease_id'] = df['disease_id'].map(self.disease_id_mapping)
+        df['gene_id'] = df['gene_id'].map(self.gene_id_mapping)
+        df['category'] = df['category'].map(self.category_mapping)
+
+    def _create_mapping(self, df: pd.DataFrame, property: str) -> Dict[Any, int]:
+        return {id: index for index, id in enumerate(sorted(df[property].unique()))}
 
     def _create_hetero_data(self, X, y) -> HeteroData:
         data = HeteroData()
