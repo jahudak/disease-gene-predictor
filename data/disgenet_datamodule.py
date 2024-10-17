@@ -15,6 +15,14 @@ class DisgenetDataModule(LightningDataModule):
         self.train_data = None
         self.test_data = None
         self.val_data = None
+
+        self.disease_id_mapping = None
+        self.gene_id_mapping = None
+        self.category_mapping = None
+
+        self.disease_attributes = None
+        self.gene_attributes = None
+
         self.prepare_data()
 
     def prepare_data(self):
@@ -22,35 +30,35 @@ class DisgenetDataModule(LightningDataModule):
         df['category'] = df['disease_id'].str[6]
         df['target'] = 1
 
-        disease_id_mapping = {id_str: idx for idx, id_str in enumerate(df['disease_id'].unique())}
-        gene_id_mapping = {id_str: idx for idx, id_str in enumerate(sorted(df['gene_id'].unique()))}
-        category_mapping = {id_str: idx for idx, id_str in enumerate(sorted(df['category'].unique()))}
+        self.disease_id_mapping = {id_str: idx for idx, id_str in enumerate(df['disease_id'].unique())}
+        self.gene_id_mapping = {id_str: idx for idx, id_str in enumerate(sorted(df['gene_id'].unique()))}
+        self.category_mapping = {id_str: idx for idx, id_str in enumerate(sorted(df['category'].unique()))}
 
-        df['disease_id'] = df['disease_id'].map(disease_id_mapping)
-        df['gene_id'] = df['gene_id'].map(gene_id_mapping)
-        df['category'] = df['category'].map(category_mapping)
+        df['disease_id'] = df['disease_id'].map(self.disease_id_mapping)
+        df['gene_id'] = df['gene_id'].map(self.gene_id_mapping)
+        df['category'] = df['category'].map(self.category_mapping)
 
-        disease_attributes = [{
+        self.disease_attributes = [{
             "category": int(df[df['disease_id'] == i].iloc[0]["category"])
-        } for i in range(len(disease_id_mapping))]
-        gene_attributes = [{
+        } for i in range(len(self.disease_id_mapping))]
+        self.gene_attributes = [{
             "dsi": float(df[df['gene_id'] == i].iloc[0]["dsi"]),
             "dpi": float(df[df['gene_id'] == i].iloc[0]["dpi"])
-        } for i in range(len(gene_id_mapping))]
+        } for i in range(len(self.gene_id_mapping))]
 
         adjacency_list = df.groupby('disease_id')['gene_id'].apply(set).to_dict()
-        negative_adjacency_list = {i: set() for i in range(len(disease_id_mapping))}
+        negative_adjacency_list = {i: set() for i in range(len(self.disease_id_mapping))}
 
         for _ in range(len(df)):
-            disease_id = random.randint(0, len(disease_id_mapping) - 1)
-            gene_id = random.randint(0, len(gene_id_mapping) - 1)
+            disease_id = random.randint(0, len(self.disease_id_mapping) - 1)
+            gene_id = random.randint(0, len(self.gene_id_mapping) - 1)
             while gene_id in adjacency_list[disease_id] or gene_id in negative_adjacency_list[disease_id]:
-                gene_id = random.randint(0, len(gene_id_mapping) - 1)
+                gene_id = random.randint(0, len(self.gene_id_mapping) - 1)
             negative_adjacency_list[disease_id].add(gene_id)
 
         for disease_id in negative_adjacency_list:
             for gene_id in negative_adjacency_list[disease_id]:
-                data = {'disease_id': int(disease_id), 'gene_id': int(gene_id), "ei": 1, "dsi": gene_attributes[gene_id]["dsi"], "dpi": gene_attributes[gene_id]["dpi"], "category": int(disease_attributes[disease_id]["category"]), "target": int(0)}
+                data = {'disease_id': int(disease_id), 'gene_id': int(gene_id), "ei": 1, "dsi": self.gene_attributes[gene_id]["dsi"], "dpi": self.gene_attributes[gene_id]["dpi"], "category": int(self.disease_attributes[disease_id]["category"]), "target": int(0)}
                 df.loc[len(df)] = data
 
         X = df.drop(columns = ['target'])  
@@ -59,35 +67,9 @@ class DisgenetDataModule(LightningDataModule):
         X_train, X_temp, y_train, y_temp = train_test_split(X, y, test_size = 0.3, random_state = 42)
         X_val, X_test, y_val, y_test = train_test_split(X_temp, y_temp, test_size = 0.5, random_state = 42)
 
-        train_data = HeteroData()
-        train_data['disease'].id = torch.tensor([i for i in range(len(disease_id_mapping))])
-        train_data["disease"].x = torch.tensor([attr["category"] for attr in disease_attributes], dtype = torch.float)
-        train_data["gene"].id = torch.tensor([i for i in range(len(gene_id_mapping))])
-        train_data["gene"].x = torch.tensor([[attr["dsi"], attr["dpi"]] for attr in gene_attributes], dtype = torch.float)
-        train_data["disease", "to", "gene"].edge_index = torch.tensor(np.vstack((X_train["disease_id"].values, X_train["gene_id"].values)), dtype = torch.long)
-        train_data["disease", "to", "gene"].edge_attr = torch.tensor(X_train["ei"].values, dtype = torch.float)
-        train_data["disease", "to", "gene"].y = y_train
-        self.train_data = train_data
-
-        test_data = HeteroData()
-        test_data['disease'].id = torch.tensor([i for i in range(len(disease_id_mapping))])
-        test_data["disease"].x = torch.tensor([attr["category"] for attr in disease_attributes], dtype = torch.float)
-        test_data["gene"].id = torch.tensor([i for i in range(len(gene_id_mapping))])
-        test_data["gene"].x = torch.tensor([[attr["dsi"], attr["dpi"]] for attr in gene_attributes], dtype = torch.float)
-        test_data["disease", "to", "gene"].edge_index = torch.tensor(np.vstack((X_train["disease_id"].values, X_train["gene_id"].values)), dtype = torch.long)
-        test_data["disease", "to", "gene"].edge_attr = torch.tensor(X_test["ei"].values, dtype = torch.float)
-        test_data["disease", "to", "gene"].y = y_test
-        self.test_data = test_data
-
-        val_data = HeteroData()
-        val_data['disease'].id = torch.tensor([i for i in range(len(disease_id_mapping))])
-        val_data["disease"].x = torch.tensor([attr["category"] for attr in disease_attributes], dtype = torch.float)
-        val_data["gene"].id = torch.tensor([i for i in range(len(gene_id_mapping))])
-        val_data["gene"].x = torch.tensor([[attr["dsi"], attr["dpi"]] for attr in gene_attributes], dtype = torch.float)
-        val_data["disease", "to", "gene"].edge_index = torch.tensor(np.vstack((X_train["disease_id"].values, X_train["gene_id"].values)), dtype = torch.long)
-        val_data["disease", "to", "gene"].edge_attr = torch.tensor(X_val["ei"].values, dtype = torch.float)
-        val_data["disease", "to", "gene"].y = y_val
-        self.val_data = val_data
+        self.train_data = self._create_hetero_data(X_train, y_train)
+        self.test_data = self._create_hetero_data(X_test, y_test)
+        self.val_data = self._create_hetero_data(X_val, y_val)
 
     def train_dataloader(self):
         return DataLoader(self.train_data, batch_size = self.batch_size, shuffle = True)
@@ -97,3 +79,14 @@ class DisgenetDataModule(LightningDataModule):
 
     def test_dataloader(self):
         return DataLoader(self.test_data, batch_size = self.batch_size)
+
+    def _create_hetero_data(self, X, y) -> HeteroData:
+        data = HeteroData()
+        data['disease'].id = torch.tensor([i for i in range(len(self.disease_id_mapping))])
+        data["disease"].x = torch.tensor([attr["category"] for attr in self.disease_attributes], dtype = torch.float)
+        data["gene"].id = torch.tensor([i for i in range(len(self.gene_id_mapping))])
+        data["gene"].x = torch.tensor([[attr["dsi"], attr["dpi"]] for attr in self.gene_attributes], dtype = torch.float)
+        data["disease", "to", "gene"].edge_index = torch.tensor(np.vstack((X["disease_id"].values, X["gene_id"].values)), dtype = torch.long)
+        data["disease", "to", "gene"].edge_attr = torch.tensor(X["ei"].values, dtype = torch.float)
+        data["disease", "to", "gene"].y = y
+        return data
