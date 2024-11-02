@@ -171,3 +171,4 @@ docs/*.toc
 
 # Data
 *.csv
+.python-version

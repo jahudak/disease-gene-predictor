@@ -21,6 +21,8 @@ matplotlib = "^3.9.2"
 seaborn = "^0.13.2"
 requests = "^2.32.3"
 
+[tool.poetry.scripts]
+disease-gene-predictor = "disease-gene-predictor.main:main"
 
 [build-system]
 requires = ["poetry-core"]
