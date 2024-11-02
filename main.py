@@ -4,13 +4,12 @@ from model import Model
 from data import DisgenetClient, DisgenetDataModule
 
 
-
 def dgaData():
     disgenet_api_key = os.getenv("DISGENET_API_KEY")
     # example_value = os.getenv("EXAMPLE_KEY")
     # example_value = os.getenv("EXAMPLE_KEY")
 
-    if disgenet_api_key == None:
+    # if disgenet_api_key == None:
     if disgenet_api_key == None:
         print("[ERROR] Missing DISGENET API key.")
         return
@@ -19,7 +18,6 @@ def dgaData():
         print("[LOG] Disgenet data not found. Preparing to create data...")
         disgenet_client = DisgenetClient(disgenet_api_key)
         disgenet_client.create_csv_file()
-
 
     datamodule = DisgenetDataModule()
     print("[LOG] Finished successfully")
@@ -39,7 +37,6 @@ def main():
     else:
         print("[LOG] Disgenet data found. Skipping data creation.")
     testModel()
-
 
 
 main()
