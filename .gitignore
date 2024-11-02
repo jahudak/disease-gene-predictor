@@ -171,3 +171,5 @@ docs/*.toc
 
 # Data
 *.csv
+install-pyenv-win.ps1
+.python-version
