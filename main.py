@@ -12,7 +12,7 @@ class HeteroVGAE(torch.nn.Module):
     def __init__(self, in_channels_disease, in_channels_gene, out_channels):
         super(HeteroVGAE, self).__init__()
         self.encoder = HeteroConv(
-            {("disease", "to", "gene"): SAGEConv(in_channels_disease, out_channels)},
+            {("disease", "to", "gene"): SAGEConv([in_channels_disease, in_channels_gene], out_channels)},
             aggr="sum",
         )
 
@@ -64,7 +64,7 @@ def dgaData():
 def usingBaseLineModel():
     in_channels_disease = 1  # Input features for disease nodes
     in_channels_gene = 2  # Input features for gene nodes
-    out_channels = 2  # Output features for all nodes
+    out_channels = 1  # Output features for all nodes
     train_data = datamodule.train_data
     baselineModel = HeteroVGAE(in_channels_disease, in_channels_gene, out_channels)
 
@@ -119,4 +119,5 @@ def main():
 
 
 main()
+print("GYOZTUNK!!!")
 # testModel()s
