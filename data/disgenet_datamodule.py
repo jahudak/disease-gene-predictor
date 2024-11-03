@@ -141,7 +141,8 @@ class DisgenetDataModule(LightningDataModule):
             id: index for index, id in enumerate(sorted(self.df[property].unique()))
         }
 
-    def _create_hetero_data(self, X: pd.DataFrame, y: Any | pd.Series) -> HeteroData:
+    """
+        def _create_hetero_data(self, X: pd.DataFrame, y: Any | pd.Series) -> HeteroData:
         data = HeteroData()
         data["disease"].id = torch.tensor(
             [i for i in range(len(self.disease_id_mapping))]
@@ -163,5 +164,29 @@ class DisgenetDataModule(LightningDataModule):
         data["disease", "to", "gene"].y = y
         return data
 
+    """
+
     def _get_random_id(self, range: int) -> int:
         return random.randint(0, range - 1)
+
+    def _create_hetero_data(self, X: pd.DataFrame, y: Any | pd.Series) -> HeteroData:
+        data = HeteroData()
+        data["disease"].id = torch.tensor(
+            [i for i in range(len(self.disease_id_mapping))]
+        )
+        data["disease"].x = torch.tensor(
+            [attr["category"] for attr in self.disease_attributes], dtype=torch.float
+        )
+        data["gene"].id = torch.tensor([i for i in range(len(self.gene_id_mapping))])
+        data["gene"].x = torch.tensor(
+            [[attr["dsi"], attr["dpi"]] for attr in self.gene_attributes],
+            dtype=torch.float,
+        )
+        data["disease", "to", "gene"].edge_index = torch.tensor(
+            np.vstack((X["disease_id"].values, X["gene_id"].values)), dtype=torch.long
+        )
+        data["disease", "to", "gene"].edge_attr = torch.tensor(
+            X["ei"].values, dtype=torch.float
+        )
+        data["disease", "to", "gene"].y = y
+        return data

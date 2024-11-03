@@ -2,66 +2,48 @@ import os
 
 from model import Model
 from data import DisgenetClient, DisgenetDataModule
-import torch
-import torch.nn.functional as F
-from torch_geometric.nn import GCNConv, VGAE
-import pytorch_lightning as pl
-from torch_geometric.loader import DataLoader
-from pytorch_lightning import LightningModule, Trainer
 from torch_geometric.data import HeteroData
+import torch
+from torch_geometric.nn import HeteroConv, SAGEConv, VGAE
+from torch_geometric.nn.models.autoencoder import InnerProductDecoder
 
 
-class Encoder(torch.nn.Module):
-    def __init__(self, in_channels, out_channels):
-        super(Encoder, self).__init__()
-        self.conv1 = GCNConv(in_channels, 2 * out_channels)
-        self.conv2 = GCNConv(2 * out_channels, 2 * out_channels)
+class HeteroVGAE(torch.nn.Module):
+    def __init__(self, in_channels_disease, in_channels_gene, out_channels):
+        super(HeteroVGAE, self).__init__()
+        self.encoder = HeteroConv(
+            {("disease", "to", "gene"): SAGEConv(in_channels_disease, out_channels)},
+            aggr="sum",
+        )
 
-    def forward(self, x, edge_index):
-        # print(f"Input x shape: {x.shape}")
-        x = F.relu(self.conv1(x, edge_index))
-        # print(f"Shape after conv1: {x.shape}")
-        x = self.conv2(x, edge_index)
-        # print(f"Shape after conv2: {x.shape}")
-        return x.chunk(2, dim=-1)
+        self.fc_mu_disease = torch.nn.Linear(out_channels, out_channels)
+        self.fc_logvar_disease = torch.nn.Linear(out_channels, out_channels)
+        self.fc_mu_gene = torch.nn.Linear(out_channels, out_channels)
+        self.fc_logvar_gene = torch.nn.Linear(out_channels, out_channels)
 
+        self.vgae = VGAE(self.encoder, decoder=InnerProductDecoder())
 
-class VGAEModel(LightningModule):
-    def __init__(self, input_dim, hidden_dim, output_dim):
-        super(VGAEModel, self).__init__()
-        self.encoder = Encoder(input_dim, hidden_dim)
-        self.vgae = VGAE(self.encoder)
+    def encode(self, x_dict, edge_index_dict):
+        print("Problem starts here??")
+        h_dict = self.encoder(x_dict, edge_index_dict)
+        print("Problem ends here??")
+        mu = {
+            "disease": self.fc_mu_disease(h_dict["disease"]),
+            "gene": self.fc_mu_gene(h_dict["gene"]),
+        }
+        logvar = {
+            "disease": self.fc_logvar_disease(h_dict["disease"]),
+            "gene": self.fc_logvar_gene(h_dict["gene"]),
+        }
+        return mu, logvar
 
-    def forward(self, data: HeteroData):
-        x, edge_index = data["disease"].x, data["disease", "to", "gene"].edge_index
-        print(f"x shape: {x.shape}")
-        print(f"edge_index shape: {edge_index.shape}")
-        return self.vgae.encode(x, edge_index)
-
-    def training_step(self, batch, batch_idx):
-        z = self(batch)
-        loss = self.vgae.recon_loss(z, batch["disease", "to", "gene"].edge_index)
-        loss = loss + (1 / batch["disease"].x.size(0)) * self.vgae.kl_loss()
-        self.log("train_loss", loss)
-        return loss
-
-    def validation_step(self, batch, batch_idx):
-        z = self(batch)
-        loss = self.vgae.recon_loss(z, batch["disease", "to", "gene"].edge_index)
-        loss = loss + (1 / batch["disease"].x.size(0)) * self.vgae.kl_loss()
-        self.log("val_loss", loss)
-        return loss
-
-    def test_step(self, batch, batch_idx):
-        z = self(batch)
-        loss = self.vgae.recon_loss(z, batch["disease", "to", "gene"].edge_index)
-        loss = loss + (1 / batch["disease"].x.size(0)) * self.vgae.kl_loss()
-        self.log("test_loss", loss)
-        return loss
-
-    def configure_optimizers(self):
-        optimizer = torch.optim.Adam(self.parameters(), lr=0.001)
-        return optimizer
+    def forward(self, x_dict, edge_index_dict):
+        # Encode into latent space
+        mu, logvar = self.encode(x_dict, edge_index_dict)
+        # Sample from the latent space
+        z = self.vgae.reparameterize(mu, logvar)
+        # Decode the latent space
+        return self.vgae.decode_all(z, edge_index_dict)
 
 
 def dgaData():
@@ -80,30 +62,45 @@ def dgaData():
 
 
 def usingBaseLineModel():
-    dimension_dl = datamodule.test_dataloader()
-    node_features = 1
-    print(f"Node features: {node_features}")
-    hidden_dim = 16
-    latent_space_dim = 8
-    baseline_model = VGAEModel(
-        input_dim=node_features, hidden_dim=hidden_dim, output_dim=latent_space_dim
-    )
-    trainer = Trainer(max_epochs=10)
-    print("TRAINING ELKEZDODOTT!!!\n")
-    trainer.fit(
-        baseline_model, datamodule.train_dataloader(), datamodule.val_dataloader()
-    )
-    trainer.test(baseline_model, datamodule.test_dataloader())
+    in_channels_disease = 1  # Input features for disease nodes
+    in_channels_gene = 2  # Input features for gene nodes
+    out_channels = 2  # Output features for all nodes
+    train_data = datamodule.train_data
+    baselineModel = HeteroVGAE(in_channels_disease, in_channels_gene, out_channels)
+
+    disease_tensor = train_data["disease"].x
+    original_shape = disease_tensor.shape[0]
+    disease_tensor = disease_tensor.view(original_shape, 1)
+
+    x_dict = {"disease": disease_tensor, "gene": train_data["gene"].x}
+
+    edge_index_dict = {
+        ("disease", "to", "gene"): train_data["disease", "to", "gene"].edge_index
+    }
+
+    # Confirm dimensions
+    for node_type, features in x_dict.items():
+        print(f"x_dict['{node_type}']: {features.shape}")
+
+    # Confirm dimensions
+    for edge_type, edge_index in edge_index_dict.items():
+        print(f"edge_index_dict['{edge_type}']: {edge_index.shape}")
+
+    output = baselineModel(x_dict, edge_index_dict)
 
 
 def testIterating():
     datamodule.prepare_data()
     test_dl = datamodule.test_dataloader()
     # get the dimension of node features
-    print("Dimension of node features \n")
-    print(next(iter(test_dl))["disease"].x.shape)
-    print(next(iter(test_dl)))
-    print(next(iter(test_dl)))  # this gives an error
+    # print out test_dl size
+
+    dataloader_size = len(test_dl)
+    # Print the size
+    print(f"Number of batches in DataLoader: {dataloader_size}")
+
+    print(next(iter(test_dl))["disease"].x[83])
+    print(next(iter(test_dl))["gene"].x[83])
 
 
 def main():
@@ -116,9 +113,9 @@ def main():
     # testModel()
     # testDataModule()
     # dataLoaderIterationTest()
-    testIterating()
-    # datamodule.prepare_data()
-    # usingBaseLineModel()
+    # testIterating()
+    datamodule.prepare_data()
+    usingBaseLineModel()
 
 
 main()
