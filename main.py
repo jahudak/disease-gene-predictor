@@ -80,7 +80,7 @@ def usingBaseLineModel():
 
     output = baselineModel(x_dict, edge_index_dict)
     # Train the model
-    baselineModel.train()
+    baselineModel.train(x_dict, edge_index_dict)
 
     # Define the optimizer and loss function
     optimizer = torch.optim.Adam(baselineModel.parameters(), lr=0.01)
@@ -90,7 +90,12 @@ def usingBaseLineModel():
     for epoch in range(10):
         optimizer.zero_grad()
         output = baselineModel(x_dict, edge_index_dict)
-        loss = criterion(output, train_data["disease"].y)
+        print("---")
+        print(output)
+        print("---")
+        print(train_data["disease"].x)
+        print("---")
+        loss = criterion(output, train_data["disease"].x)
         loss.backward()
         optimizer.step()
 

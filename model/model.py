@@ -49,10 +49,19 @@ class HeteroVGAE(torch.nn.Module):
     def forward(self, x_dict, edge_index_dict):
         # Encode into latent space
         mu, logvar = self.encode(x_dict, edge_index_dict)
+        # print("mu")
+        # print(mu)
+        # print("logvar")
+        # print(logvar)
+
+        # Convert mu, logvar to tensor
+        mu_tensor = torch.tensor(mu["gene"])
+        logvar_tensor = torch.tensor(logvar["gene"])
+
         # Sample from the latent space
-        z = self.vgae.reparametrize(mu, logvar)
-        # Decode the latent space
-        return self.vgae.decode_all(z, edge_index_dict)
+        z = self.vgae.reparametrize(mu_tensor, logvar_tensor)
+        # Latens reprezentacio
+        return z
 
     def train(self, x_dict, edge_index_dict):
         return self.vgae.train()
