@@ -12,7 +12,7 @@ class HeteroVGAE(torch.nn.Module):
                 ("disease", "to", "gene"): SAGEConv(
                     [in_channels_disease, in_channels_gene],
                     out_channels,
-                    # FXI: It doesnt like when the data is indexed from 0
+                    # FYI: It doesnt like when the data is indexed from 0
                 ),
                 ("gene", "rev_to", "disease"): SAGEConv(
                     [in_channels_gene, in_channels_disease], out_channels
@@ -31,14 +31,14 @@ class HeteroVGAE(torch.nn.Module):
     def encode(self, x_dict, edge_index_dict):
         h_dict = self.encoder(
             x_dict, edge_index_dict
-        )  # Todo: currently only return with a gene tensor (dpi, dsi)
+        )  # TODO: currently only return with a gene tensor (dpi, dsi)
         mu = {
             # no disease
             # "disease": self.fc_mu_disease(h_dict["disease"]),
             "gene": self.fc_mu_gene(h_dict["gene"]),
         }
         logvar = {
-            # No desease
+            # no desease
             # "disease": self.fc_logvar_disease(h_dict["disease"]),
             "gene": self.fc_logvar_gene(h_dict["gene"]),
         }
@@ -50,17 +50,17 @@ class HeteroVGAE(torch.nn.Module):
     def forward(self, x_dict, edge_index_dict):
         # Embed to Latent space
         mu, logvar = self.encode(x_dict, edge_index_dict)
-        # ToDo ne kelljen tenzorrá alakítani
+        # TODO no manual transformations
         mu_tensor = torch.tensor(mu["gene"])
         logvar_tensor = torch.tensor(logvar["gene"])
         z = self.vgae.reparametrize(mu_tensor, logvar_tensor)
-        # Latent reprezentation
+        # Latent representation
         return z
 
     def train(self, x_dict, edge_index_dict):
-        # ToDo
+        # TODO
         return
 
     def evaluate(self, x_dict, edge_index_dict):
-        # ToDo
+        # TODO
         return

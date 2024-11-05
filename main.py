@@ -7,7 +7,6 @@ import torch
 
 def dgaData():
     disgenet_api_key = os.getenv("DISGENET_API_KEY")
-    # example_value = os.getenv("EXAMPLE_KEY")
 
     if disgenet_api_key == None:
         print("[ERROR] Missing DISGENET API key.")
@@ -21,9 +20,9 @@ def dgaData():
 
 
 def prepareTransformation():
-    in_channels_disease = 2  # Input features for disease nodes (id and category)
-    in_channels_gene = 2  # Input features for gene nodes (dsi, dpi)
-    out_channels = 1  # Output features for all nodes (is there connection?)
+    in_channels_disease = 2     # Input features for disease nodes (id and category)
+    in_channels_gene = 2        # Input features for gene nodes (dsi, dpi)
+    out_channels = 1            # Output features for all nodes (is there a link?)
     global train_data
     train_data = datamodule.train_data
     global baselineModel
@@ -31,7 +30,7 @@ def prepareTransformation():
 
     disease_categories = train_data["disease"].x.view(-1, 1)
 
-    # Adding the disease tensor categpry value (integer) to the disease tensor
+    # Adding the disease tensor category value (integer) to the disease tensor
     num_nodes = train_data["disease"].x.shape[0]
     disease_tensor = torch.arange(num_nodes).view(-1, 1)
 
@@ -85,14 +84,11 @@ def main():
         dgaData()
     else:
         print("[LOG] Disgenet data found. Skipping data creation.")
-    # testModel()
-    # testDataModule()
-    # dataLoaderIterationTest()
-    # testIterating()
+    
     datamodule.prepare_data()
     prepareTransformation()
     usingBaseLineModel()
 
 
 main()
-print("Train, test complete")
+print("[LOG] Train and test complete")
