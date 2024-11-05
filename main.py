@@ -1,74 +1,8 @@
 import os
 
-from model import Model
+from model import HeteroVGAE
 from data import DisgenetClient, DisgenetDataModule
-from torch_geometric.data import HeteroData
 import torch
-from torch_geometric.nn import HeteroConv, SAGEConv, VGAE
-from torch_geometric.nn.models.autoencoder import InnerProductDecoder
-
-
-class HeteroVGAE(torch.nn.Module):
-    def __init__(self, in_channels_disease, in_channels_gene, out_channels):
-        super(HeteroVGAE, self).__init__()
-
-        self.encoder = HeteroConv(
-            {
-                ("disease", "to", "gene"): SAGEConv(
-                    [in_channels_disease, in_channels_gene],
-                    out_channels,
-                    # fyi: nem szereti ha 0-tól megy az indexelés
-                ),
-                ("gene", "rev_to", "disease"): SAGEConv(
-                    [in_channels_gene, in_channels_disease], out_channels
-                ),
-            },
-            aggr="min",
-        )
-
-        self.fc_mu_disease = torch.nn.Linear(out_channels, out_channels)
-        self.fc_logvar_disease = torch.nn.Linear(out_channels, out_channels)
-        self.fc_mu_gene = torch.nn.Linear(out_channels, out_channels)
-        self.fc_logvar_gene = torch.nn.Linear(out_channels, out_channels)
-
-        self.vgae = VGAE(self.encoder, decoder=InnerProductDecoder())
-
-    def encode(self, x_dict, edge_index_dict):
-        # print("---")
-        # print(x_dict)
-        # print("---")
-        # print("---")
-        # print(edge_index_dict)
-        # print("---")
-
-        # print("Problem starts here??")
-        h_dict = self.encoder(x_dict, edge_index_dict)
-
-        print("h_dict keys:", h_dict.keys())
-        print("h_dict disease:", h_dict.get("disease", "No output for disease"))
-        print("h_dict gene:", h_dict.get("gene", "No output for gene"))
-
-        # print("---")
-        # print(h_dict)
-        # print("---")
-        # print("Problem ends here??")
-        mu = {
-            "disease": self.fc_mu_disease(h_dict["disease"]),
-            "gene": self.fc_mu_gene(h_dict["gene"]),
-        }
-        logvar = {
-            "disease": self.fc_logvar_disease(h_dict["disease"]),
-            "gene": self.fc_logvar_gene(h_dict["gene"]),
-        }
-        return mu, logvar
-
-    def forward(self, x_dict, edge_index_dict):
-        # Encode into latent space
-        mu, logvar = self.encode(x_dict, edge_index_dict)
-        # Sample from the latent space
-        z = self.vgae.reparameterize(mu, logvar)
-        # Decode the latent space
-        return self.vgae.decode_all(z, edge_index_dict)
 
 
 def dgaData():
@@ -87,17 +21,46 @@ def dgaData():
 
 
 def usingBaseLineModel():
-    in_channels_disease = 1  # Input features for disease nodes
+    in_channels_disease = 2  # Input features for disease nodes
     in_channels_gene = 2  # Input features for gene nodes
     out_channels = 1  # Output features for all nodes
     train_data = datamodule.train_data
     baselineModel = HeteroVGAE(in_channels_disease, in_channels_gene, out_channels)
 
-    disease_tensor = train_data["disease"].x
-    original_shape = disease_tensor.shape[0]
-    disease_tensor = disease_tensor.view(original_shape, 1)
+    # dataModuleDf = datamodule.df
+    # geneAttributes = dataModuleDf[["gene_id", "gene_name", "gene_description"]]
+    # geneAttributes["gene_id"] = dataModuleDf["gene_id"]
+    # create an ID for each gene
+    # geneAttributes["gene_idx"] = geneAttributes.to_numpy()
+    # geneAttributes["gene_dpi"] = geneAttributes["dpi"]
+    # geneAttributes["gene_dsi"] = geneAttributes["dsi"]
 
-    x_dict = {"disease": disease_tensor, "gene": train_data["gene"].x}
+    disease_categories = train_data["disease"].x.view(-1, 1)
+
+    # Create an ID tensor incrementing from 0 to n
+    num_nodes = train_data["disease"].x.shape[0]
+    disease_tensor = torch.arange(num_nodes).view(-1, 1)
+
+    # print("Disease tensor shape:")
+    # print(disease_tensor.shape)
+    # print("-----------------")
+    # print(disease_tensor)
+    # print("-----------------")
+    # print("Disease categories shape:")
+    # print(disease_categories.shape)
+    # print("-----------------")
+    # print(disease_categories)
+    # print("-----------------")
+
+    concatanated_tensor = torch.cat((disease_tensor, disease_categories), dim=1)
+
+    # print("Concatanated tensor shape:")
+    # print(concatanated_tensor.shape)
+    # print("-----------------")
+    # print(concatanated_tensor)
+    # print("-----------------")
+
+    x_dict = {"disease": concatanated_tensor, "gene": train_data["gene"].x}
 
     edge_index_dict = {
         ("disease", "to", "gene"): train_data["disease", "to", "gene"].edge_index
@@ -111,7 +74,33 @@ def usingBaseLineModel():
     for edge_type, edge_index in edge_index_dict.items():
         print(f"edge_index_dict['{edge_type}']: {edge_index.shape}")
 
+    # print("-----------------")
+    # print(x_dict)
+    # print("-----------------")
+
     output = baselineModel(x_dict, edge_index_dict)
+    # Train the model
+    baselineModel.train()
+
+    # Define the optimizer and loss function
+    optimizer = torch.optim.Adam(baselineModel.parameters(), lr=0.01)
+    criterion = torch.nn.BCEWithLogitsLoss()
+
+    # Iterate over the training data
+    for epoch in range(10):
+        optimizer.zero_grad()
+        output = baselineModel(x_dict, edge_index_dict)
+        loss = criterion(output, train_data["disease"].y)
+        loss.backward()
+        optimizer.step()
+
+    # Evaluate the model
+    baselineModel.eval()
+    with torch.no_grad():
+        output = baselineModel(x_dict, edge_index_dict)
+        predictions = torch.sigmoid(output)
+        accuracy = torch.mean((predictions > 0.5).float() == train_data["disease"].y)
+        print(f"Accuracy: {accuracy.item()}")
 
 
 def testIterating():
