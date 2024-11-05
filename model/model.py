@@ -12,7 +12,7 @@ class HeteroVGAE(torch.nn.Module):
                 ("disease", "to", "gene"): SAGEConv(
                     [in_channels_disease, in_channels_gene],
                     out_channels,
-                    # Jo ha tudjuk: nem szereti ha 0-tól megy az indexelés
+                    # FXI: It doesnt like when the data is indexed from 0
                 ),
                 ("gene", "rev_to", "disease"): SAGEConv(
                     [in_channels_gene, in_channels_disease], out_channels
@@ -31,13 +31,14 @@ class HeteroVGAE(torch.nn.Module):
     def encode(self, x_dict, edge_index_dict):
         h_dict = self.encoder(
             x_dict, edge_index_dict
-        )  # Todo: ez egyelőre csak gene tenzort ad
-        # print(h_dict)
+        )  # Todo: currently only return with a gene tensor (dpi, dsi)
         mu = {
+            # no disease
             # "disease": self.fc_mu_disease(h_dict["disease"]),
             "gene": self.fc_mu_gene(h_dict["gene"]),
         }
         logvar = {
+            # No desease
             # "disease": self.fc_logvar_disease(h_dict["disease"]),
             "gene": self.fc_logvar_gene(h_dict["gene"]),
         }
@@ -47,24 +48,19 @@ class HeteroVGAE(torch.nn.Module):
         return self.vgae.decode_all(z, edge_index_dict)
 
     def forward(self, x_dict, edge_index_dict):
-        # Encode into latent space
+        # Embed to Latent space
         mu, logvar = self.encode(x_dict, edge_index_dict)
-        # print("mu")
-        # print(mu)
-        # print("logvar")
-        # print(logvar)
-
-        # Convert mu, logvar to tensor
+        # ToDo ne kelljen tenzorrá alakítani
         mu_tensor = torch.tensor(mu["gene"])
         logvar_tensor = torch.tensor(logvar["gene"])
-
-        # Sample from the latent space
         z = self.vgae.reparametrize(mu_tensor, logvar_tensor)
-        # Latens reprezentacio
+        # Latent reprezentation
         return z
 
     def train(self, x_dict, edge_index_dict):
-        return self.vgae.train()
+        # ToDo
+        return
 
     def evaluate(self, x_dict, edge_index_dict):
-        return self.vgae.evaluate()
+        # ToDo
+        return

@@ -2,7 +2,7 @@ import torch
 import random
 import numpy as np
 import pandas as pd
-from typing import List, Dict, Any
+from typing import Dict, Any
 from torch_geometric.data import HeteroData
 from torch_geometric.loader import DataLoader
 from pytorch_lightning import LightningDataModule
@@ -11,15 +11,15 @@ from sklearn.model_selection import train_test_split
 from torch.utils.data import Dataset
 
 
+# Kompatibilitas miatt. Igy lehet iteralni a datamodul által adott dataloadereken
 class HeteroDataset(Dataset):
     def __init__(self, hetero_data):
         self.data = hetero_data
 
     def __len__(self):
-        return 1  # Assuming `self.data` is a single HeteroData object for the entire dataset
+        return 1
 
     def __getitem__(self, idx):
-        # Return the whole dataset since it's a single HeteroData object
         return self.data
 
 
@@ -52,12 +52,10 @@ class DisgenetDataModule(LightningDataModule):
         self._train_test_val_split()
 
     def train_dataloader(self) -> DataLoader:
-        # train_dataset = DisgenetDataset(self.train_data)
         train_dataset = HeteroDataset(self.train_data)
         return DataLoader(train_dataset, batch_size=self.batch_size, shuffle=True)
 
     def val_dataloader(self) -> DataLoader:
-        # val_dataset = DisgenetDataset(self.train_data)
         val_dataset = HeteroDataset(self.val_data)
         return DataLoader(val_dataset, batch_size=self.batch_size)
 
