@@ -4,10 +4,7 @@ version = "0.1.0"
 description = "Graph neural network project leveraging DisGeNET to predict disease-gene associations"
 authors = ["jahudak <100032984+jahudak@users.noreply.github.com>"]
 readme = "README.md"
-packages = [
-    { include = "data" },
-    { include = "model" }
-]
+packages = [{ include = "data" }, { include = "model" }]
 
 [tool.poetry.dependencies]
 python = "^3.12"

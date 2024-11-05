@@ -1,24 +1,66 @@
 import torch
-import lightning
-import torch_geometric as ptg
-import numpy as np
-import pandas as pd
-import matplotlib
-import matplotlib.pyplot as plt
-import seaborn as sns
+from torch_geometric.nn import HeteroConv, SAGEConv, VGAE
+from torch_geometric.nn.models.autoencoder import InnerProductDecoder
 
-class Model():
-    def __init__(self, disgenet_client):
-        self.disgenet_client = disgenet_client
-    
-    def test_imports(self):
-        print(f"PyTorch version: {torch.__version__}")
-        print(f"Lightning version: {lightning.__version__}")
-        print(f"PyTorch Geometric version: {ptg.__version__}")
-        print(f"Numpy version: {np.__version__}")
-        print(f"Pandas version: {pd.__version__}")
-        print(f"Matplotlib version: {matplotlib.__version__}")
-        print(f"Seaborn version: {sns.__version__}")
 
-    def test_data(self):
-        print(self.disgenet_client.get_data())
+class HeteroVGAE(torch.nn.Module):
+    def __init__(self, in_channels_disease, in_channels_gene, out_channels):
+        super(HeteroVGAE, self).__init__()
+
+        self.encoder = HeteroConv(
+            {
+                ("disease", "to", "gene"): SAGEConv(
+                    [in_channels_disease, in_channels_gene],
+                    out_channels,
+                    # FYI: It doesnt like when the data is indexed from 0
+                ),
+                ("gene", "rev_to", "disease"): SAGEConv(
+                    [in_channels_gene, in_channels_disease], out_channels
+                ),
+            },
+            aggr="mean",
+        )
+
+        self.fc_mu_disease = torch.nn.Linear(out_channels, out_channels)
+        self.fc_logvar_disease = torch.nn.Linear(out_channels, out_channels)
+        self.fc_mu_gene = torch.nn.Linear(out_channels, out_channels)
+        self.fc_logvar_gene = torch.nn.Linear(out_channels, out_channels)
+
+        self.vgae = VGAE(self.encoder, decoder=InnerProductDecoder())
+
+    def encode(self, x_dict, edge_index_dict):
+        h_dict = self.encoder(
+            x_dict, edge_index_dict
+        )  # TODO: currently only return with a gene tensor (dpi, dsi)
+        mu = {
+            # no disease
+            # "disease": self.fc_mu_disease(h_dict["disease"]),
+            "gene": self.fc_mu_gene(h_dict["gene"]),
+        }
+        logvar = {
+            # no desease
+            # "disease": self.fc_logvar_disease(h_dict["disease"]),
+            "gene": self.fc_logvar_gene(h_dict["gene"]),
+        }
+        return mu, logvar
+
+    def decode(self, z, edge_index_dict):
+        return self.vgae.decode_all(z, edge_index_dict)
+
+    def forward(self, x_dict, edge_index_dict):
+        # Embed to Latent space
+        mu, logvar = self.encode(x_dict, edge_index_dict)
+        # TODO no manual transformations
+        mu_tensor = torch.tensor(mu["gene"])
+        logvar_tensor = torch.tensor(logvar["gene"])
+        z = self.vgae.reparametrize(mu_tensor, logvar_tensor)
+        # Latent representation
+        return z
+
+    def train(self, x_dict, edge_index_dict):
+        # TODO
+        return
+
+    def evaluate(self, x_dict, edge_index_dict):
+        # TODO
+        return
