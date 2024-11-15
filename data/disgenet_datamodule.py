@@ -26,6 +26,8 @@ class HeteroDataset(Dataset):
 class DisgenetDataModule(LightningDataModule):
     def __init__(self, batch_size=32):
         super().__init__()
+        self.valami = torch.zeros(300, 5024)  # magic mtx
+        self.weight = None
         random.seed(42)
         self.batch_size = batch_size
 
@@ -48,8 +50,17 @@ class DisgenetDataModule(LightningDataModule):
         self._load_data()
         self._create_and_apply_mappings()
         self._initialize_entity_attributes()
+        for idx, row in self.df.iterrows():
+            self.valami[int(row["disease_id"]), int(row["gene_id"])] = 1
+        self.weight = torch.where(self.valami == 0, 1, 107)
         self._generate_negative_samples()
         self._train_test_val_split()
+
+    def get_valami(self):
+        return self.valami
+
+    def get_weight(self):
+        return self.weight
 
     def train_dataloader(self) -> DataLoader:
         train_dataset = HeteroDataset(self.train_data)
@@ -162,4 +173,12 @@ class DisgenetDataModule(LightningDataModule):
             X["ei"].values, dtype=torch.float
         )
         data["disease", "to", "gene"].y = y
+        data["gene", "rev_to", "disease"].edge_index = torch.tensor(
+            np.vstack((X["gene_id"].values, X["disease_id"].values)), dtype=torch.long
+        )
+        data["gene", "rev_to", "disease"].edge_attr = torch.tensor(
+            X["ei"].values, dtype=torch.float
+        )
+        data["gene", "rev_to", "disease"].y = y
+
         return data
