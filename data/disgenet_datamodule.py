@@ -7,7 +7,6 @@ from torch_geometric.data import HeteroData
 from torch_geometric.loader import DataLoader
 from pytorch_lightning import LightningDataModule
 from sklearn.model_selection import train_test_split
-
 from torch.utils.data import Dataset
 
 # Ensures compatibility by allowing iteration over dataloaders
@@ -55,12 +54,6 @@ class DisgenetDataModule(LightningDataModule):
         self.weight = torch.where(self.truth_matrix == 0, 1, 107)
         self._generate_negative_samples()
         self._train_test_val_split()
-
-    def get_truth_matrix(self):
-        return self.truth_matrix
-
-    def get_weight(self):
-        return self.weight
 
     def train_dataloader(self) -> DataLoader:
         train_dataset = HeteroDataset(self.train_data)
