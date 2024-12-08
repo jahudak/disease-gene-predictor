@@ -5,6 +5,8 @@ from data import DisgenetClient, DisgenetDataModule, Dataset
 from sklearn.metrics import roc_auc_score, average_precision_score
 from sklearn.metrics import confusion_matrix
 import optuna
+from optuna_dashboard import run_server
+import datetime
 
 
 def prepare_data_csv():
@@ -42,9 +44,6 @@ def initialize_data(datamodule: DisgenetDataModule, dataset: Dataset):
 
 
 def objective(trial, datamodule: DisgenetDataModule):
-    prepare_data_csv()
-    datamodule = DisgenetDataModule()
-    datamodule.prepare_data()
     y_truth = datamodule.truth_matrix
     x_train_node, x_train_edge = initialize_data(datamodule, Dataset.TRAIN)
     x_val_node, x_val_edge = initialize_data(datamodule, Dataset.VAL)
@@ -83,9 +82,17 @@ def objective(trial, datamodule: DisgenetDataModule):
 
 
 def optimize_hyperparameters(datamodule: DisgenetDataModule):
-    study = optuna.create_study(direction="maximize")
-    study.optimize(lambda trial: objective(trial, datamodule), n_trials=5)
-    print(study.best_params)
+    db_storage = "sqlite:///db.sqlite3"
+    current_datetime = datetime.datetime.now()
+    study_name = f"disgenet_study_{current_datetime.strftime('%Y-%m-%d_%H-%M-%S')}"
+    study = optuna.create_study(
+        direction="maximize",
+        storage=db_storage,  # Specify the storage URL here.
+        study_name=study_name,
+    )
+    study.optimize(lambda trial: objective(trial, datamodule), n_trials=50, n_jobs=-1)
+    run_server(db_storage)
+    print(f"Best parameters are: {study.best_params}")
     return study.best_params
 
 
@@ -100,8 +107,8 @@ def initialize_model(
         in_channels_disease=1,
         in_channels_gene=2,
         out_channels=1,
-        heterovgae_hidden_channels=16,  # can be optimized
-        encoder_hidden_channels=16,  # can be optimized
+        heterovgae_hidden_channels=heterovgae_hidden_channels_param,  # can be optimized
+        encoder_hidden_channels=encoder_hidden_channels_param,  # can be optimized
     )
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     criterion = torch.nn.BCEWithLogitsLoss(weight=edge_weight)
