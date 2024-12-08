@@ -174,3 +174,6 @@ docs/*.toc
 install-pyenv-win.ps1
 .python-version
 .vscode/settings.json
+
+# Gradio
+.gradio/*
