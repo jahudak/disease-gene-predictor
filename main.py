@@ -50,17 +50,19 @@ def objective(trial, datamodule: DisgenetDataModule):
     x_test_node, x_test_edge = initialize_data(datamodule, Dataset.TEST)
     edge_weight = datamodule.weight
 
-    learning_rate = trial.suggest_float("learning", 1e-5, 1e-1, log=False)
+    learning_rate = trial.suggest_float("learning_rate", 1e-5, 1e-1, log=False)
     heterovgae_hidden_channels = trial.suggest_int("heterovgae_hidden_channels", 8, 32)
     encoder_hidden_channels = trial.suggest_int("encoder_hidden_channels", 8, 32)
-    optimizier = trial.suggest_categorical("optimizer", ["Adam", "SGD"])
+    weight_decay_param = trial.suggest_float("weight_decay", 1e-5, 1e-1, log=False)
+    # optimizier = trial.suggest_categorical("optimizer", ["Adam", "SGD"])
 
     model, optimizer, criterion = initialize_model(
         learning_rate,
         heterovgae_hidden_channels,
         encoder_hidden_channels,
-        optimizier,
+        # optimizier,
         edge_weight,
+        weight_decay_param,
     )
 
     best_accuracy = 0.0
@@ -89,8 +91,11 @@ def optimize_hyperparameters(datamodule: DisgenetDataModule):
         direction="maximize",
         storage=db_storage,  # Specify the storage URL here.
         study_name=study_name,
+        pruner=optuna.pruners.MedianPruner(
+            n_startup_trials=5, n_warmup_steps=20, interval_steps=10
+        ),
     )
-    study.optimize(lambda trial: objective(trial, datamodule), n_trials=50, n_jobs=-1)
+    study.optimize(lambda trial: objective(trial, datamodule), n_trials=100, n_jobs=-1)
     run_server(db_storage)
     print(f"Best parameters are: {study.best_params}")
     return study.best_params
@@ -100,8 +105,9 @@ def initialize_model(
     learning_rate,
     heterovgae_hidden_channels_param,
     encoder_hidden_channels_param,
-    optimizier,
+    # optimizier,
     edge_weight,
+    weight_decay_param,
 ):
     model = HeteroVGAE(
         in_channels_disease=1,
@@ -110,7 +116,9 @@ def initialize_model(
         heterovgae_hidden_channels=heterovgae_hidden_channels_param,  # can be optimized
         encoder_hidden_channels=encoder_hidden_channels_param,  # can be optimized
     )
-    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+    optimizer = torch.optim.Adam(
+        model.parameters(), lr=learning_rate, weight_decay=weight_decay_param
+    )
     criterion = torch.nn.BCEWithLogitsLoss(weight=edge_weight)
 
     return model, optimizer, criterion
@@ -133,11 +141,11 @@ def evaluate(model, x_node, x_edge, y_truth):
     print(cm)
 
     # Accuracy calculation based on the correct prediction
-    y_pred = (y_scores > 0.5).astype(int)
-    accuracy = (y_pred == y_true).mean()
-    print(f"[EVAL] Accuracy: {accuracy:.6f}")
+    # y_pred = (y_scores > 0.5).astype(int)
+    # accuracy = (y_pred == y_true).mean()
+    # print(f"[EVAL] Accuracy: {accuracy:.6f}")
     model.train()
-    return accuracy
+    return roc_auc
 
 
 def main():
