@@ -55,18 +55,6 @@ class DisgenetDataModule(LightningDataModule):
         self._generate_negative_samples()
         self._train_test_val_split()
 
-    def train_dataloader(self) -> DataLoader:
-        train_dataset = HeteroDataset(self.train_data)
-        return DataLoader(train_dataset, batch_size=self.batch_size, shuffle=True)
-
-    def val_dataloader(self) -> DataLoader:
-        val_dataset = HeteroDataset(self.val_data)
-        return DataLoader(val_dataset, batch_size=self.batch_size)
-
-    def test_dataloader(self) -> DataLoader:
-        test_dataset = HeteroDataset(self.test_data)
-        return DataLoader(test_dataset, batch_size=self.batch_size)
-
     def _load_data(self) -> None:
         self.df = pd.read_csv("dga_data.csv")
         self.df["category"] = self.df["disease_id"].str[6]
