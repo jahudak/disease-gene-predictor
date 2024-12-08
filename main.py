@@ -8,7 +8,7 @@ from sklearn.metrics import confusion_matrix
 
 def prepare_data_csv():
     if not os.path.exists("dga_data.csv"):
-        print("[LOG] Disgenet data not found. Preparing to create data...")
+        print("[INFO] Disgenet data not found. Preparing to create data...")
         
         disgenet_api_key = os.getenv("DISGENET_API_KEY")
 
@@ -18,10 +18,10 @@ def prepare_data_csv():
         disgenet_client = DisgenetClient(disgenet_api_key)
         disgenet_client.create_csv_file()
         
-        print("[LOG] Finished successfully.")
+        print("[INFO] Finished successfully.")
         
     else:
-        print("[LOG] Disgenet data found. Skipping data creation.")
+        print("[INFO] Disgenet data found. Skipping data creation.")
 
 
 def initialize_data(datamodule: DisgenetDataModule, dataset: Dataset):
@@ -50,38 +50,51 @@ def initialize_model(learning_rate, edge_weight):
     
     return model, optimizer, criterion
 
+def evaluate(model, x_node, x_edge, y_truth):
+    model.eval()
+    output = model(x_node, x_edge)
+    prediction = torch.sigmoid(output)
+    
+    y_true = y_truth.flatten().numpy()
+    y_scores = prediction.flatten().numpy()
+    
+    roc_auc = roc_auc_score(y_true, y_scores)
+    pr_auc = average_precision_score(y_true, y_scores)
+    cm = confusion_matrix(y_true, y_scores > 0.5)
+    
+    print(f"[EVAL] ROC AUC: {roc_auc:.6f}")
+    print(f"[EVAL] PR AUC:  {pr_auc:.6f}")
+    print(cm)
+    
+    model.train()
+
 
 def main():
     prepare_data_csv()
     datamodule = DisgenetDataModule()
     datamodule.prepare_data()
     y_truth = datamodule.truth_matrix
-    x_train, y_train = initialize_data(datamodule, Dataset.TRAIN)
+    x_train_node, x_train_edge = initialize_data(datamodule, Dataset.TRAIN)
+    x_val_node, x_val_edge = initialize_data(datamodule, Dataset.VAL)
+    x_test_node, x_test_edge = initialize_data(datamodule, Dataset.TEST)
     model, optimizer, criterion = initialize_model(learning_rate = 0.001, edge_weight = datamodule.weight)
 
-    for epoch in range(1, 200 + 1):
+    for epoch in range(1, 200):
         optimizer.zero_grad()
-        output = model(x_train, y_train)
+        output = model(x_train_node, x_train_edge)
         loss = criterion(output, y_truth)
-        print(f"[{epoch}]: {loss.item()}")
+        print(f"[TRAIN] Epoch {epoch}: {loss.item()}")
         loss.backward()
         optimizer.step()
         
         if epoch % 10 == 0:
             with torch.no_grad():
-                pred = torch.sigmoid(output)
-
-                y_true = y_truth.flatten().numpy()
-                y_scores = pred.flatten().numpy()
-                
-                auc = roc_auc_score(y_true, y_scores)
-                pr_auc = average_precision_score(y_true, y_scores)
-                cm = confusion_matrix(y_true, y_scores > 0.5)
-                
-                print(f"ROC AUC: {auc}")
-                print(f"PR AUC:  {pr_auc}")
-                print(cm)
+                evaluate(model, x_val_node, x_val_edge, y_truth)
+    
+    with torch.no_grad():
+        print("[INFO] Final test results")
+        evaluate(model, x_test_node, x_test_edge, y_truth)
 
 
 main()
-print("[LOG] Train and test complete")
+print("[INFO] Train and test complete")
