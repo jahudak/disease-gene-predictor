@@ -3,11 +3,9 @@ from torch_geometric.nn import HeteroConv, SAGEConv, VGAE
 
 
 class Encoder(torch.nn.Module):
-    def __init__(self, in_channels_disease, in_channels_gene, out_channels):
+    def __init__(self, in_channels_disease, in_channels_gene, hidden_channels, out_channels):
         super(Encoder, self).__init__()
-        
-        hidden_channels = 64
-        
+                
         self.conv1 = HeteroConv(
             {
                 ("disease", "to", "gene"): SAGEConv(
@@ -48,18 +46,16 @@ class Decoder:
 
 
 class HeteroVGAE(torch.nn.Module):
-    def __init__(self, in_channels_disease, in_channels_gene, out_channels):
+    def __init__(self, in_channels_disease, in_channels_gene, encoder_hidden_channels, encoder_out_channels, out_channels):
         super(HeteroVGAE, self).__init__()
-        
-        hidden = 32
-        
-        self.encoder = Encoder(in_channels_disease, in_channels_gene, hidden)
+                
+        self.encoder = Encoder(in_channels_disease, in_channels_gene, encoder_hidden_channels, encoder_out_channels)
         self.decoder = Decoder()
 
-        self.fc_mu_disease = torch.nn.Linear(hidden, out_channels)
-        self.fc_logvar_disease = torch.nn.Linear(hidden, out_channels)
-        self.fc_mu_gene = torch.nn.Linear(hidden, out_channels)
-        self.fc_logvar_gene = torch.nn.Linear(hidden, out_channels)
+        self.fc_mu_disease = torch.nn.Linear(encoder_out_channels, out_channels)
+        self.fc_logvar_disease = torch.nn.Linear(encoder_out_channels, out_channels)
+        self.fc_mu_gene = torch.nn.Linear(encoder_out_channels, out_channels)
+        self.fc_logvar_gene = torch.nn.Linear(encoder_out_channels, out_channels)
 
         self.vgae = VGAE(self.encoder, self.decoder)
 

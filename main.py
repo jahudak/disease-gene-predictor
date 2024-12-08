@@ -1,5 +1,6 @@
 import os
 import torch
+import gradio as gr
 from model import HeteroVGAE
 from data import DisgenetClient, DisgenetDataModule, Dataset
 from sklearn.metrics import roc_auc_score, average_precision_score
@@ -43,9 +44,15 @@ def initialize_data(datamodule: DisgenetDataModule, dataset: Dataset):
     return node_features, edge_features
 
 
-def initialize_model(learning_rate, edge_weight):
-    model = HeteroVGAE(in_channels_disease = 1, in_channels_gene = 2, out_channels = 1)
-    optimizer = torch.optim.Adam(model.parameters(), lr = learning_rate)
+def initialize_model(learning_rate, weight_decay, edge_weight, encoder_hidden_channels, encoder_out_channels):
+    model = HeteroVGAE(
+        in_channels_disease = 1, 
+        in_channels_gene = 2, 
+        encoder_hidden_channels = encoder_hidden_channels, 
+        encoder_out_channels = encoder_out_channels, 
+        out_channels = 1
+    )
+    optimizer = torch.optim.Adam(model.parameters(), lr = learning_rate, weight_decay = weight_decay)
     criterion = torch.nn.BCEWithLogitsLoss(weight = edge_weight)
     
     return model, optimizer, criterion
@@ -67,9 +74,11 @@ def evaluate(model, x_node, x_edge, y_truth):
     print(cm)
     
     model.train()
+    
+    return roc_auc, pr_auc
 
 
-def main():
+def train_and_evaluate_model(learning_rate, weight_decay, encoder_hidden_channels, encoder_out_channels):
     prepare_data_csv()
     datamodule = DisgenetDataModule()
     datamodule.prepare_data()
@@ -77,7 +86,7 @@ def main():
     x_train_node, x_train_edge = initialize_data(datamodule, Dataset.TRAIN)
     x_val_node, x_val_edge = initialize_data(datamodule, Dataset.VAL)
     x_test_node, x_test_edge = initialize_data(datamodule, Dataset.TEST)
-    model, optimizer, criterion = initialize_model(learning_rate = 0.001, edge_weight = datamodule.weight)
+    model, optimizer, criterion = initialize_model(learning_rate, weight_decay, datamodule.weight, encoder_hidden_channels, encoder_out_channels)
 
     for epoch in range(1, 200):
         optimizer.zero_grad()
@@ -93,8 +102,56 @@ def main():
     
     with torch.no_grad():
         print("[INFO] Final test results")
-        evaluate(model, x_test_node, x_test_edge, y_truth)
+        return evaluate(model, x_test_node, x_test_edge, y_truth)
+
+
+def main():
+    def run_model(learning_rate, weight_decay, encoder_hidden_channels, encoder_out_channels):
+        return train_and_evaluate_model(learning_rate, weight_decay, encoder_hidden_channels, encoder_out_channels)
+    
+    demo = gr.Interface(
+        fn=run_model,
+        inputs=[
+            gr.Slider(
+                label="Learning rate", 
+                value=0.001, 
+                minimum=0.001, 
+                maximum=0.1, 
+                step=0.001
+            ),
+            gr.Slider(
+                label="Weight decay", 
+                value=0.0, 
+                minimum=0.0, 
+                maximum=0.001, 
+                step=0.0001
+            ),
+            gr.Slider(
+                label="Encoder hidden channels", 
+                value=64, 
+                minimum=4, 
+                maximum=128, 
+                step=1
+            ),
+            gr.Slider(
+                label="Encoder out channels", 
+                value=32, 
+                minimum=2, 
+                maximum=64, 
+                step=1
+            ),
+        ],
+        outputs=[
+            gr.Textbox(
+                label="ROC AUC"
+            ), 
+            gr.Textbox(
+                label="PR AUC"
+            )
+        ]
+    )
+
+    demo.launch()
 
 
 main()
-print("[INFO] Train and test complete")
