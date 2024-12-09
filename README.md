@@ -6,11 +6,13 @@ Team members:
 - Laszlo Patrik Abrok (JPWF8N)
 - Janos Hudak (CP4EIQ)
 
+For evaluation instructions, please see the "Deployment and Evaluation" part under Quick Start.
+
 ## ℹ️ Project description
 
 This is our semester project for the [VITMMA19 Deep Learning course](https://www.tmit.bme.hu/vitmma19). It leverages graph neural networks and real-life medical data from [DISGENET](https://disgenet.com/) to predict disease-gene associations.
 
-The project will include a model and a learning framework based on [PyTorch Lightning](https://lightning.ai/docs/pytorch/stable/) and [PyTorch Geometric](https://pytorch-geometric.readthedocs.io/en/latest/), a semi-automatic LaTeX documentation solution and an MLaaS application as well.  
+The project includes a VGAE model and a learning framework based on [PyTorch Lightning](https://lightning.ai/docs/pytorch/stable/) and [PyTorch Geometric](https://pytorch-geometric.readthedocs.io/en/latest/), a semi-automatic LaTeX documentation solution and a Gradio MLaaS application as well.  
 
 ## 📊 Data and Files
 
@@ -38,11 +40,15 @@ Where the above information was not provided, the minimum of the interpretation 
 
 The project also includes a DisgenetDatamodule class, which is responsible for generating the train, test and validation datasets. It does this using the [pandas](https://pandas.pydata.org/) and [pytorch_geometric](https://pytorch-geometric.readthedocs.io/en/latest/index.html) libraries, using [HeteroData](https://pytorch-geometric.readthedocs.io/en/latest/generated/torch_geometric.data.HeteroData.html?highlight=heterodata#torch_geometric.data.HeteroData).
 
-At this level, the application checks that it has the required DISGENET API key and the generated data. If the latter is not present, it will be generated in a comma separated values file in about two minutes using around 100 API calls with the paging mechanism. After that, the data module processes the data and creates the train, test and validation datasets, which are exposed as [DataLoaders](https://pytorch.org/docs/stable/data.html#torch.utils.data.DataLoader) via the corresponding functions.
+The application checks that it has the required DISGENET API key and the generated data. If the latter is not present, it will be generated in a comma separated values file in about two minutes using around 100 API calls with the paging mechanism. After that, the data module processes the data and creates the train, test and validation datasets, which are exposed as [DataLoaders](https://pytorch.org/docs/stable/data.html#torch.utils.data.DataLoader) via the corresponding functions.
 
-Running the pipeline, model training and model evaluation have to start after the data preparation ended. (When dga_data.cvs is present the '[INFO] Disgenet data found. Skipping data creation.' shall appear on the commandline.') Currently, the baseline implementation only consists of a model implemented using common torch librariers and pytorch geometric. To expose the dataloaders to the model a custom HeteroDataset dataset class[Datasets](https://pytorch.org/docs/stable/data.html#dataset-types) was implemented. As part of the next milestone the model will be implemented using PyTorch Lightning.
+## ⚙️ Model and Optimalization 
 
-As an evaluation methodology, we chose the most accurate determination of breast cancer disease-gene associations beyond basic accuracy.
+Running the pipeline, model training and model evaluation have to start after the data preparation ended. (When dga_data.cvs is present the '[INFO] Disgenet data found. Skipping data creation.' shall appear on the commandline.') To expose the dataloaders to the model a custom HeteroDataset dataset class [Datasets](https://pytorch.org/docs/stable/data.html#dataset-types) was implemented. 
+
+Our solution consists of a custom VGAE implementation, which we optimized manually and with [Optuna](https://optuna.org/). The optimalization scripts and results can be found on a separate branch (#27-optimize-hyperparameters). The application loads a [Gradio](https://www.gradio.app/) web interface, which can be used to start a run by setting any parameters. 
+
+Our documentation is also included in the root directory as a pdf file with the name "Dokumentáció.pdf". 
 
 ## 🚀 Quick Start
 
@@ -80,7 +86,7 @@ python main.py
 
 After installation, the project documentation will build after every LaTeX file save.
 
-### Deployment
+### Deployment and Evaluation
 
 #### Requirements
 
@@ -95,7 +101,7 @@ docker build -t disease-gene-predictor .
 #### Start the container  
 
 ```
-docker run --env-file .env -e DISGENET_API_KEY=<paste-your-api-key-here> disease-gene-predictor
+docker run -e DISGENET_API_KEY=<paste-your-api-key-here> disease-gene-predictor
 ```
 
 ## 📚 Resources
