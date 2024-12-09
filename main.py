@@ -6,7 +6,8 @@ from data import DisgenetClient, DisgenetDataModule, Dataset
 from sklearn.metrics import roc_auc_score, average_precision_score
 from sklearn.metrics import confusion_matrix
 
-
+# Create the csv file of disease gene associations if it does not exist
+# Uses the DisgenetClient to connect with the DisGeNET API
 def prepare_data_csv():
     if not os.path.exists("dga_data.csv"):
         print("[INFO] Disgenet data not found. Preparing to create data...")
@@ -25,6 +26,8 @@ def prepare_data_csv():
         print("[INFO] Disgenet data found. Skipping data creation.")
 
 
+# Putting the data into dictionaries so the model can use it as an input
+# The reverse edge direction is also created
 def initialize_data(datamodule: DisgenetDataModule, dataset: Dataset):
     data = getattr(datamodule, dataset.value, None)
     if data is None:
@@ -44,6 +47,7 @@ def initialize_data(datamodule: DisgenetDataModule, dataset: Dataset):
     return node_features, edge_features
 
 
+# Initalize model with the constant channel values
 def initialize_model(learning_rate, weight_decay, edge_weight, encoder_hidden_channels, encoder_out_channels):
     model = HeteroVGAE(
         in_channels_disease = 1, 
@@ -57,6 +61,9 @@ def initialize_model(learning_rate, weight_decay, edge_weight, encoder_hidden_ch
     
     return model, optimizer, criterion
 
+
+# Evaluate the model with roc_au and pr_auc scores
+# These values can be used for hyperparameter tuning with Optuna (maybe grid search)
 def evaluate(model, x_node, x_edge, y_truth):
     model.eval()
     output = model(x_node, x_edge)
@@ -71,7 +78,7 @@ def evaluate(model, x_node, x_edge, y_truth):
     
     print(f"[EVAL] ROC AUC: {roc_auc:.6f}")
     print(f"[EVAL] PR AUC:  {pr_auc:.6f}")
-    print(cm)
+    print(cm) # if the score is bigger than 0.5, the value is 1
     
     model.train()
     

@@ -4,7 +4,7 @@ import time
 import math
 from typing import Dict, List, Any
 
-
+# DisgenetClient class is responsible for creating a postprocessed csv file with the data obtained from the DisGeNET API.
 class DisgenetClient:
     def __init__(self, api_key: str):
         self.api_key = api_key
@@ -72,6 +72,7 @@ class DisgenetClient:
         results.clear()
         return
 
+    # Handle the API rate limit by waiting for the specified time and then retrying the request
     def handle_api_rate_limit(self, response: Dict, params: Dict, route: str) -> Any:
         if response.status_code == 429:
             while response.status_code == 429:
@@ -82,6 +83,7 @@ class DisgenetClient:
                 time.sleep(wait_time)
 
                 self.api_calls += 1
+                # The API key is for auth, can be obtained from disgenet personal site
                 headers: Dict = {
                     "Authorization": self.api_key,
                     "accept": "application/json",
@@ -122,6 +124,7 @@ class DisgenetClient:
             file.writelines(sorted_rows)
         return
 
+    # Get disease parameter from ICD code (https://icd.who.int/browse10/2019/en)
     def get_disease_param(self, disease_ids: str) -> str:
         category: str = disease_ids[0]
         disease_range: str = disease_ids[1:]

@@ -21,6 +21,8 @@ class HeteroDataset(Dataset):
         return self.data
 
 
+# The DisgenetDataModule class is responsible for preparing the data for the DisGeNET dataset
+# Results in a single batch containgig the enitire graph
 class DisgenetDataModule(LightningDataModule):
     def __init__(self, batch_size=32):
         super().__init__()
@@ -60,6 +62,7 @@ class DisgenetDataModule(LightningDataModule):
         self.df["category"] = self.df["disease_id"].str[6]
         self.df["target"] = 1
 
+    # Create mappings for disease_id, gene_id, and category
     def _create_and_apply_mappings(self) -> None:
         self.disease_id_mapping = self._create_mapping("disease_id")
         self.gene_id_mapping = self._create_mapping("gene_id")
@@ -69,6 +72,9 @@ class DisgenetDataModule(LightningDataModule):
         self.df["gene_id"] = self.df["gene_id"].map(self.gene_id_mapping)
         self.df["category"] = self.df["category"].map(self.category_mapping)
 
+    # Initialize the attributes for diseases and genes
+    # Category for disease (ICD10 code)
+    # DSI (disease specificity idx) and DPI (disease pleiontropy index) for genes
     def _initialize_entity_attributes(self) -> None:
         self.disease_attributes = [
             {"category": int(self.df[self.df["disease_id"] == i].iloc[0]["category"])}
@@ -82,6 +88,9 @@ class DisgenetDataModule(LightningDataModule):
             for i in range(len(self.gene_id_mapping))
         ]
 
+
+    # Generate negative samples by randomly selecting gene_ids that are not in the adjacency list
+    # This is needed for the training
     def _generate_negative_samples(self) -> None:
         adjacency_list = self.df.groupby("disease_id")["gene_id"].apply(set).to_dict()
         negative_adjacency_list = {
