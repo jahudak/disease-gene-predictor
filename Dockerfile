@@ -10,5 +10,8 @@ RUN poetry install --no-interaction --no-ansi
 # copy application code
 COPY . .
 
+# expose port for gradio
+EXPOSE 7860
+
 # run application
-CMD ["python", "main.py"]
+CMD ["python", "-u", "main.py"]

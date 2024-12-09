@@ -158,7 +158,13 @@ def main():
         ]
     )
 
-    demo.launch()
+    if os.path.exists('/.dockerenv'):
+        demo.launch(server_name="0.0.0.0", server_port=7860)
+    else: 
+        demo.launch()
 
 
-main()
+if __name__ == "__main__":
+    print("[INFO] Application is starting. Please be patient.")
+    main()
+    print("[INFO] Exiting application.")

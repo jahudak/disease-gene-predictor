@@ -92,16 +92,19 @@ After installation, the project documentation will build after every LaTeX file 
 
 - [Docker](https://www.docker.com/)
 
-#### Build the image locally  
+#### Option 1: Use the latest image from Docker Hub
+
+Important: although the image will serve on http://0.0.0.0:7860, please visit [http://127.0.0.1:7860](http://127.0.0.1:7860) in your browser.
+
+```
+docker run -e DISGENET_API_KEY=<paste-your-api-key-here> -p 7860:7860 jahudak/disease-gene-predictor
+```
+
+#### Option 2: Build the image locally  
 
 ```
 docker build -t disease-gene-predictor .
-```
-
-#### Start the container  
-
-```
-docker run -e DISGENET_API_KEY=<paste-your-api-key-here> disease-gene-predictor
+docker run -e DISGENET_API_KEY=<paste-your-api-key-here> -p 7860:7860 disease-gene-predictor
 ```
 
 ## 📚 Resources
